@@ -27,6 +27,11 @@ public class PasswordManager {
 				try {
 					PasswordManager window = new PasswordManager();
 					window.frame.setVisible(true);
+					PasswordEnterDialog dialog = new PasswordEnterDialog("Enter new database passord:");
+					if (!dialog.passwordEntered()) {
+						window.frame.dispose();
+						return;
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
