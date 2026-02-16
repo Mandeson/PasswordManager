@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -23,6 +24,10 @@ public class Cipher {
 	private static int PASSWORD_HASH_ITERATIONS = 700000;
 	private static int SALT_BYTES = 16;
 	private static int IV_BYTES = 12;
+	
+	public static class WrongPasswordException extends RuntimeException {
+		private static final long serialVersionUID = 5480521040891146223L;
+	}
 	
 	public static class Encryptor {
 		byte[] encrypted;
@@ -68,7 +73,7 @@ public class Cipher {
 	}
 	
 	public static class Decryptor {
-		private byte[] decrypted;
+		private byte[] decrypted = null;
 		
 		public Decryptor(byte[] encrypted, String password) {
 			decrypt(encrypted, password);
@@ -101,7 +106,11 @@ public class Cipher {
 			} catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException
 					| InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException
 					| BadPaddingException e) {
-				throw new RuntimeException("Decryption error", e);
+				if (e instanceof AEADBadTagException) { // If the error was caused by wrong password
+					throw new WrongPasswordException();
+				} else {
+					throw new RuntimeException("Decryption error", e);
+				}
 			}
 		}
 	}

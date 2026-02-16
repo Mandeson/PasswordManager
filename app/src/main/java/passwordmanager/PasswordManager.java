@@ -6,6 +6,7 @@ import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 
+import passwordmanager.core.Cipher.WrongPasswordException;
 import passwordmanager.core.Storage;
 
 import javax.swing.DefaultListModel;
@@ -24,6 +25,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.awt.event.ActionEvent;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 
 public class PasswordManager {
 	private static String DATABASE_FILE = "PasswordDatabase.bin";
@@ -41,22 +44,37 @@ public class PasswordManager {
 					PasswordManager window = new PasswordManager();
 					window.frame.setVisible(true);
 					
-					InputStream input = null;
-					String prompt;
-					if (Files.exists(Paths.get(DATABASE_FILE))) {
-						prompt = "Enter password:";
-						input = new FileInputStream(DATABASE_FILE);
-					} else {
-						prompt = "Enter new database passord:";
-					}
+					boolean newDatabase = false;
+					if (!Files.exists(Paths.get(DATABASE_FILE)))
+						newDatabase = true;
 					
-					PasswordEnterDialog dialog = new PasswordEnterDialog(prompt);
+					PasswordEnterDialog dialog = new PasswordEnterDialog(newDatabase ? "Enter new database passord:"
+							: "Enter passord:");
 					if (!dialog.passwordEntered()) {
 						window.frame.dispose();
 						return;
 					}
 					
-					window.storage = new Storage(input, dialog.getPassword());
+					Storage storage = null;
+					if (newDatabase) {
+						storage = new Storage(null, dialog.getPassword());
+					} else {
+						do {
+							InputStream input = new FileInputStream(DATABASE_FILE);
+							try {
+								storage = new Storage(input, dialog.getPassword());
+							} catch (WrongPasswordException e) {
+								dialog = new PasswordEnterDialog("Wrong password. Try again:");
+								if (!dialog.passwordEntered()) {
+									window.frame.dispose();
+									input.close();
+									return;
+								}
+							}
+							input.close();
+						} while (storage == null);
+					}
+					window.storage = storage;
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -85,11 +103,17 @@ public class PasswordManager {
 		list.setModel(new DefaultListModel<String>());
 		
 		JScrollPane scrollPane = new JScrollPane(list);
-		frame.getContentPane().add(scrollPane);
+		JTextArea textArea = new JTextArea();
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollPane, textArea);
+		frame.getContentPane().add(splitPane);
 		
 		JPanel panel = new JPanel();
-		frame.getContentPane().add(panel, BorderLayout.SOUTH);
 		panel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+		frame.getContentPane().add(panel, BorderLayout.SOUTH);
+		
+		JButton btnAdd = new JButton("Add");
+		btnAdd.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		panel.add(btnAdd);
 		
 		JButton btnSave = new JButton("Save");
 		btnSave.addActionListener(new ActionListener() {
@@ -107,9 +131,5 @@ public class PasswordManager {
 		});
 		btnSave.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnSave);
-		
-		JButton btnAdd = new JButton("Add");
-		btnAdd.setAlignmentX(Component.RIGHT_ALIGNMENT);
-		panel.add(btnAdd);
 	}
 }

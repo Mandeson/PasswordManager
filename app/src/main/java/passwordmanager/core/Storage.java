@@ -20,7 +20,7 @@ import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
 public class Storage {
-	private Document document;
+	private Document document = null;
 	private String password;
 	
 	public Storage(InputStream input, String password) {
