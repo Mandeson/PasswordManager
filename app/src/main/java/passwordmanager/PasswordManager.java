@@ -45,6 +45,7 @@ public class PasswordManager {
 	private int selection = -1;
 	private Document textAreaDocument;
 	private DataEditListener documentListener = null;
+	private ListSelectionListener listSelectionListener;
 	
 	class DataEditListener implements DocumentListener {
 		@Override
@@ -114,7 +115,6 @@ public class PasswordManager {
 		list = new JList<String>();
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		list.setModel(new DefaultListModel<String>());
 		JScrollPane listScrollPane = new JScrollPane(list);
 		
 		JTextArea textArea = new JTextArea();
@@ -123,26 +123,6 @@ public class PasswordManager {
 		JScrollPane textAreaScrollPane = new JScrollPane(textArea);
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScrollPane, textAreaScrollPane);
 		frame.getContentPane().add(splitPane);
-		
-		list.addListSelectionListener(new ListSelectionListener() {
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				if (!e.getValueIsAdjusting()) {
-					selection = list.getSelectedIndex();
-					String data = storage.getEntryData(selection);
-					textArea.setEditable(false);
-					if (documentListener == null) {
-						documentListener = new DataEditListener();
-					} else {
-						textAreaDocument.removeDocumentListener(documentListener);
-					}
-					textArea.setText(data);
-					textArea.setEnabled(true);
-					textArea.setEditable(true);
-					textAreaDocument.addDocumentListener(documentListener);
-				}
-			}
-		});
 		
 		JPanel panel = new JPanel();
 		panel.setLayout(new FlowLayout(FlowLayout.RIGHT));
@@ -165,6 +145,25 @@ public class PasswordManager {
 		btnAdd.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnAdd);
 		
+		JButton btnRemove = new JButton("Remove");
+		btnRemove.setEnabled(false);
+		btnRemove.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				list.removeListSelectionListener(listSelectionListener);
+				textAreaDocument.removeDocumentListener(documentListener);
+				documentListener = null;
+				storage.removeEntry(selection);
+				selection = -1;
+				textArea.setText("");
+				textArea.setEnabled(false);
+				updateListModel();
+				list.addListSelectionListener(listSelectionListener);
+			}
+		});
+		btnRemove.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		panel.add(btnRemove);
+		
 		JButton btnSave = new JButton("Save");
 		btnSave.addActionListener(new ActionListener() {
 			@Override
@@ -182,6 +181,29 @@ public class PasswordManager {
 		});
 		btnSave.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnSave);
+		
+		listSelectionListener = new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (!e.getValueIsAdjusting()) {
+					selection = list.getSelectedIndex();
+					String data = storage.getEntryData(selection);
+					textArea.setEditable(false);
+					if (documentListener == null) {
+						documentListener = new DataEditListener();
+					} else {
+						textAreaDocument.removeDocumentListener(documentListener);
+					}
+					textArea.setText(data);
+					textArea.setEnabled(true);
+					textArea.setEditable(true);
+					btnRemove.setEnabled(true);
+					textAreaDocument.addDocumentListener(documentListener);
+				}
+			}
+		};
+		
+		list.addListSelectionListener(listSelectionListener);
 	}
 	
 	private void openStorage(boolean newDatabase) {
@@ -219,9 +241,14 @@ public class PasswordManager {
 		}
 		this.storage = storage;
 		
-		DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
+		updateListModel();
+	}
+	
+	private void updateListModel() {
+		DefaultListModel<String> model = new DefaultListModel<String>();
 		for (String entryName : storage.getEntryNames())
 			model.addElement(entryName);
+		list.setModel(model);
 	}
 	
 	private void updateStorage(DocumentEvent documentEvent) {

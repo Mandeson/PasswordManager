@@ -51,6 +51,11 @@ public class Storage {
 		modified = true;
 	}
 	
+	public void removeEntry(int entryIndex) {
+		root.removeChild(root.getChildNodes().item(entryIndex));
+		modified = true;
+	}
+	
 	public String[] getEntryNames() {
 		NodeList nodes = root.getChildNodes();
 		int nodeCount = nodes.getLength();
