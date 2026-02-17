@@ -17,10 +17,12 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 public class Storage {
 	private Document document = null;
+	private Element root;
 	private String password;
 	
 	public Storage(InputStream input, String password) {
@@ -30,7 +32,7 @@ public class Storage {
 				// Create empty database
 				DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 				document = builder.newDocument();
-				Element root = document.createElement("password_storage");
+				root = document.createElement("password_storage");
 				document.appendChild(root);
 			} else {
 				load(input);
@@ -38,6 +40,31 @@ public class Storage {
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void addEntry(String name) {
+		Element entry = document.createElement("entry");
+		entry.setAttribute("name", name);
+		root.appendChild(entry);
+	}
+	
+	public String[] getEntryNames() {
+		NodeList nodes = root.getChildNodes();
+		int nodeCount = nodes.getLength();
+		String[] ret = new String[nodeCount];
+		for (int i = 0; i < nodeCount; i++)
+			ret[i] = ((Element)nodes.item(i)).getAttribute("name");
+		return ret;
+	}
+	
+	public void setEntryData(int entryIndex, String data) {
+		Element entry = (Element)root.getChildNodes().item(entryIndex);
+		entry.setTextContent(data);
+	}
+	
+	public String getEntryData(int entryIndex) {
+		String textContent = ((Element)root.getChildNodes().item(entryIndex)).getTextContent();
+		return (textContent != null) ? textContent : "";
 	}
 	
 	public void save(OutputStream outputStream) {
@@ -61,6 +88,7 @@ public class Storage {
 			byte[] cleartext = new Cipher.Decryptor(encrypted, password).getDecrypted();
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			document = builder.parse(new ByteArrayInputStream(cleartext));
+			root = (Element)document.getLastChild();
 		} catch (ParserConfigurationException | IOException | SAXException e) {
 			throw new RuntimeException("Load error", e);
 		}

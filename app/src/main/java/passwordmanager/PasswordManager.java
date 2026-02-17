@@ -27,12 +27,19 @@ import java.nio.file.Paths;
 import java.awt.event.ActionEvent;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
 
 public class PasswordManager {
 	private static String DATABASE_FILE = "PasswordDatabase.bin";
 	private JFrame frame;
 	private JList<String> list;
 	private Storage storage;
+	int selection = -1;
 
 	/**
 	 * Launch the application.
@@ -75,22 +82,66 @@ public class PasswordManager {
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.setModel(new DefaultListModel<String>());
+		JScrollPane listScrollPane = new JScrollPane(list);
 		
-		JScrollPane scrollPane = new JScrollPane(list);
 		JTextArea textArea = new JTextArea();
-		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollPane, textArea);
+		textArea.setEnabled(false);
+		textArea.getDocument().addDocumentListener(new DocumentListener() {
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				updateStorage(e);
+			}
+			
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				updateStorage(e);
+			}
+			
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				updateStorage(e);
+			}
+		});
+		JScrollPane textAreaScrollPane = new JScrollPane(textArea);
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScrollPane, textAreaScrollPane);
 		frame.getContentPane().add(splitPane);
+		
+		list.addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (!e.getValueIsAdjusting()) {
+					selection = list.getSelectedIndex();
+					String data = storage.getEntryData(selection);
+					textArea.setText(data);
+					textArea.setEnabled(true);
+				}
+			}
+		});
 		
 		JPanel panel = new JPanel();
 		panel.setLayout(new FlowLayout(FlowLayout.RIGHT));
 		frame.getContentPane().add(panel, BorderLayout.SOUTH);
 		
 		JButton btnAdd = new JButton("Add");
+		btnAdd.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				UserInputDialog dialog = new UserInputDialog();
+				if (!dialog.inputEntered())
+					return;
+				String entryName = dialog.getInput();
+				storage.addEntry(entryName);
+				
+				DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
+				model.addElement(entryName);
+			}
+		});
 		btnAdd.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnAdd);
 		
 		JButton btnSave = new JButton("Save");
 		btnSave.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				File file = new File(DATABASE_FILE);
 				FileOutputStream fileOutputStream;
@@ -141,5 +192,18 @@ public class PasswordManager {
 			throw new RuntimeException("Storage open failed", e);
 		}
 		this.storage = storage;
+		
+		DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
+		for (String entryName : storage.getEntryNames())
+			model.addElement(entryName);
+	}
+	
+	private void updateStorage(DocumentEvent documentEvent) {
+		Document document = documentEvent.getDocument();
+		try {
+			storage.setEntryData(selection, document.getText(0, document.getLength()));
+		} catch (BadLocationException e) {
+			e.printStackTrace();
+		}
 	}
 }
