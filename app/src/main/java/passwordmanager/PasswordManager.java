@@ -38,13 +38,13 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 public class PasswordManager {
-	private static String DATABASE_FILE = "PasswordDatabase.bin";
+	private static final String DATABASE_FILE = "PasswordDatabase.bin";
 	private JFrame frame;
 	private JList<String> list;
 	private Storage storage;
-	int selection = -1;
-	Document textAreaDocument;
-	DataEditListener documentListener = null;
+	private int selection = -1;
+	private Document textAreaDocument;
+	private DataEditListener documentListener = null;
 	
 	class DataEditListener implements DocumentListener {
 		@Override

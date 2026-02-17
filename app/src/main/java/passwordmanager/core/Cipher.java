@@ -3,6 +3,7 @@ package passwordmanager.core;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -21,9 +22,11 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class Cipher {
-	private static int PASSWORD_HASH_ITERATIONS = 700000;
-	private static int SALT_BYTES = 16;
-	private static int IV_BYTES = 12;
+	private static final int PASSWORD_HASH_ITERATIONS = 700000;
+	private static final int SALT_BYTES = 16;
+	private static final int IV_BYTES = 12;
+	private static final int TAG_BITS = 128;
+	private static final int PADDING_BYTES = 1024;
 	
 	public static class WrongPasswordException extends RuntimeException {
 		private static final long serialVersionUID = 5480521040891146223L;
@@ -41,6 +44,19 @@ public class Cipher {
 		}
 		
 		private void encrypt(byte[] data, String password) {
+			// Apply padding for security
+			int size = data.length + SALT_BYTES + IV_BYTES + TAG_BITS / 8;
+			int rem = size % PADDING_BYTES;
+			if (rem != 0) {
+				int paddingSize = (PADDING_BYTES - rem);
+				byte[] newData = new byte[data.length + paddingSize];
+				ByteBuffer byteBuffer = ByteBuffer.wrap(newData);
+				byteBuffer.put(data);
+				for (int i = 0; i < paddingSize; i++)
+					byteBuffer.put((byte)' ');
+				data = byteBuffer.array();
+			}
+			
 			byte[] salt = new byte[SALT_BYTES];
 			SecureRandom secureRandom = new SecureRandom();
 			secureRandom.nextBytes(salt);
@@ -53,7 +69,7 @@ public class Cipher {
 				
 				byte[] iv = new byte[IV_BYTES];
 		        secureRandom.nextBytes(iv);
-				GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(128, iv);
+				GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_BITS, iv);
 				
 				javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
 				cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
@@ -98,7 +114,7 @@ public class Cipher {
 				byte[] key = factory.generateSecret(keySpec).getEncoded();
 				SecretKey secretKey = new SecretKeySpec(key, "AES");
 
-				GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(128, iv);
+				GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_BITS, iv);
 				
 				javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
 				cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
