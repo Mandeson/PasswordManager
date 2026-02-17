@@ -48,33 +48,7 @@ public class PasswordManager {
 					if (!Files.exists(Paths.get(DATABASE_FILE)))
 						newDatabase = true;
 					
-					PasswordEnterDialog dialog = new PasswordEnterDialog(newDatabase ? "Enter new database passord:"
-							: "Enter passord:");
-					if (!dialog.passwordEntered()) {
-						window.frame.dispose();
-						return;
-					}
-					
-					Storage storage = null;
-					if (newDatabase) {
-						storage = new Storage(null, dialog.getPassword());
-					} else {
-						do {
-							InputStream input = new FileInputStream(DATABASE_FILE);
-							try {
-								storage = new Storage(input, dialog.getPassword());
-							} catch (WrongPasswordException e) {
-								dialog = new PasswordEnterDialog("Wrong password. Try again:");
-								if (!dialog.passwordEntered()) {
-									window.frame.dispose();
-									input.close();
-									return;
-								}
-							}
-							input.close();
-						} while (storage == null);
-					}
-					window.storage = storage;
+					window.openStorage(newDatabase);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -131,5 +105,41 @@ public class PasswordManager {
 		});
 		btnSave.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnSave);
+	}
+	
+	private void openStorage(boolean newDatabase) {
+		PasswordEnterDialog dialog = new PasswordEnterDialog(newDatabase ? "Enter new database passord:"
+				: "Enter passord:");
+		if (!dialog.passwordEntered()) {
+			frame.dispose();
+			return;
+		}
+		
+		Storage storage = null;
+		try {
+			if (newDatabase) {
+				storage = new Storage(null, dialog.getPassword());
+			} else {
+				do {
+					InputStream input = new FileInputStream(DATABASE_FILE);
+					try {
+						storage = new Storage(input, dialog.getPassword());
+					} catch (WrongPasswordException e) {
+						dialog = new PasswordEnterDialog("Wrong password. Try again:");
+						if (!dialog.passwordEntered()) {
+							frame.dispose();
+							return;
+						}
+					} catch (Exception e) {
+						throw new RuntimeException("Storage open failed", e);
+					} finally {
+						input.close();
+					}
+				} while (storage == null);
+			}
+		} catch (IOException e) {
+			throw new RuntimeException("Storage open failed", e);
+		}
+		this.storage = storage;
 	}
 }
