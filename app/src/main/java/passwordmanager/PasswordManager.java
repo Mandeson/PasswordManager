@@ -141,6 +141,7 @@ public class PasswordManager {
 				storage.addEntry(entryName);
 				DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
 				model.addElement(entryName);
+				list.setSelectedIndex(storage.getEntryCount() - 1);
 				updateButtons();
 			}
 		});
