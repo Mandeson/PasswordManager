@@ -24,6 +24,7 @@ public class Storage {
 	private Document document = null;
 	private Element root;
 	private String password;
+	private boolean modified = false;
 	
 	public Storage(InputStream input, String password) {
 		this.password = password;
@@ -34,6 +35,7 @@ public class Storage {
 				document = builder.newDocument();
 				root = document.createElement("password_storage");
 				document.appendChild(root);
+				modified = true;
 			} else {
 				load(input);
 			}
@@ -46,6 +48,7 @@ public class Storage {
 		Element entry = document.createElement("entry");
 		entry.setAttribute("name", name);
 		root.appendChild(entry);
+		modified = true;
 	}
 	
 	public String[] getEntryNames() {
@@ -59,12 +62,19 @@ public class Storage {
 	
 	public void setEntryData(int entryIndex, String data) {
 		Element entry = (Element)root.getChildNodes().item(entryIndex);
+		if (entry.getTextContent().equals(data))
+			return;
 		entry.setTextContent(data);
+		modified = true;
 	}
 	
 	public String getEntryData(int entryIndex) {
 		String textContent = ((Element)root.getChildNodes().item(entryIndex)).getTextContent();
 		return (textContent != null) ? textContent : "";
+	}
+	
+	public boolean modified() {
+		return modified;
 	}
 	
 	public void save(OutputStream outputStream) {
@@ -77,6 +87,7 @@ public class Storage {
 			byte[] encrypted = new Cipher.Encryptor(cleartext, password).getEncrypted();
 			
 			outputStream.write(encrypted);
+			modified = false;
 		} catch (TransformerException | IOException e) {
 			throw new RuntimeException("Save error", e);
 		}

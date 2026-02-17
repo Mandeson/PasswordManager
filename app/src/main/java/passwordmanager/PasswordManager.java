@@ -4,6 +4,7 @@ import java.awt.EventQueue;
 
 import javax.swing.JFrame;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 
 import passwordmanager.core.Cipher.WrongPasswordException;
@@ -33,6 +34,8 @@ import javax.swing.text.Document;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class PasswordManager {
 	private static String DATABASE_FILE = "PasswordDatabase.bin";
@@ -40,6 +43,25 @@ public class PasswordManager {
 	private JList<String> list;
 	private Storage storage;
 	int selection = -1;
+	Document textAreaDocument;
+	DataEditListener documentListener = null;
+	
+	class DataEditListener implements DocumentListener {
+		@Override
+		public void removeUpdate(DocumentEvent e) {
+			updateStorage(e);
+		}
+		
+		@Override
+		public void insertUpdate(DocumentEvent e) {
+			updateStorage(e);
+		}
+		
+		@Override
+		public void changedUpdate(DocumentEvent e) {
+			updateStorage(e);
+		}
+	}
 
 	/**
 	 * Launch the application.
@@ -75,8 +97,19 @@ public class PasswordManager {
 	 */
 	private void initialize() {
 		frame = new JFrame();
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				if (!storage.modified() || JOptionPane.showConfirmDialog(frame,
+						"There is unsaved data. Are you sure you want to exit?",
+						"Close without saving?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE)
+						== JOptionPane.YES_OPTION){
+		            System.exit(0);
+		        }
+			}
+		});
 		frame.setBounds(500, 200, 450, 300);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
 		list = new JList<String>();
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
@@ -86,22 +119,7 @@ public class PasswordManager {
 		
 		JTextArea textArea = new JTextArea();
 		textArea.setEnabled(false);
-		textArea.getDocument().addDocumentListener(new DocumentListener() {
-			@Override
-			public void removeUpdate(DocumentEvent e) {
-				updateStorage(e);
-			}
-			
-			@Override
-			public void insertUpdate(DocumentEvent e) {
-				updateStorage(e);
-			}
-			
-			@Override
-			public void changedUpdate(DocumentEvent e) {
-				updateStorage(e);
-			}
-		});
+		textAreaDocument = textArea.getDocument();
 		JScrollPane textAreaScrollPane = new JScrollPane(textArea);
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScrollPane, textAreaScrollPane);
 		frame.getContentPane().add(splitPane);
@@ -112,8 +130,16 @@ public class PasswordManager {
 				if (!e.getValueIsAdjusting()) {
 					selection = list.getSelectedIndex();
 					String data = storage.getEntryData(selection);
+					textArea.setEditable(false);
+					if (documentListener == null) {
+						documentListener = new DataEditListener();
+					} else {
+						textAreaDocument.removeDocumentListener(documentListener);
+					}
 					textArea.setText(data);
 					textArea.setEnabled(true);
+					textArea.setEditable(true);
+					textAreaDocument.addDocumentListener(documentListener);
 				}
 			}
 		});
