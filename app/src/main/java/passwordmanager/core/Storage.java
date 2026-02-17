@@ -17,6 +17,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -56,6 +57,22 @@ public class Storage {
 		modified = true;
 	}
 	
+	public void moveEntryUp(int entryIndex) {
+		NodeList entries = root.getChildNodes();
+		Node entry = entries.item(entryIndex);
+		root.removeChild(entry);
+		root.insertBefore(entry, entries.item(entryIndex - 1));
+		modified = true;
+	}
+	
+	public void moveEntryDown(int entryIndex) {
+		NodeList entries = root.getChildNodes();
+		Node entry = entries.item(entryIndex);
+		root.removeChild(entry);
+		root.insertBefore(entry, entries.item(entryIndex + 1));
+		modified = true;
+	}
+	
 	public String[] getEntryNames() {
 		NodeList nodes = root.getChildNodes();
 		int nodeCount = nodes.getLength();
@@ -63,6 +80,10 @@ public class Storage {
 		for (int i = 0; i < nodeCount; i++)
 			ret[i] = ((Element)nodes.item(i)).getAttribute("name");
 		return ret;
+	}
+	
+	public int getEntryCount() {
+		return root.getChildNodes().getLength();
 	}
 	
 	public void setEntryData(int entryIndex, String data) {

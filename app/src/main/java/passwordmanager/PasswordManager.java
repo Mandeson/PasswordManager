@@ -41,6 +41,8 @@ public class PasswordManager {
 	private static final String DATABASE_FILE = "PasswordDatabase.bin";
 	private JFrame frame;
 	private JList<String> list;
+	JButton btnMoveUp;
+	JButton btnMoveDown;
 	private Storage storage;
 	private int selection = -1;
 	private Document textAreaDocument;
@@ -137,9 +139,9 @@ public class PasswordManager {
 					return;
 				String entryName = dialog.getInput();
 				storage.addEntry(entryName);
-				
 				DefaultListModel<String> model = (DefaultListModel<String>) list.getModel();
 				model.addElement(entryName);
+				updateButtons();
 			}
 		});
 		btnAdd.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -158,11 +160,51 @@ public class PasswordManager {
 				textArea.setText("");
 				textArea.setEnabled(false);
 				updateListModel();
+				btnRemove.setEnabled(false);
+				updateButtons();
 				list.addListSelectionListener(listSelectionListener);
 			}
 		});
 		btnRemove.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		panel.add(btnRemove);
+		
+		btnMoveUp = new JButton("Move up");
+		btnMoveUp.setEnabled(false);
+		btnMoveUp.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				list.removeListSelectionListener(listSelectionListener);
+				textArea.setEditable(false);
+				storage.moveEntryUp(selection);
+				selection--;
+				updateListModel();
+				updateButtons();
+				list.setSelectedIndex(selection);
+				textArea.setEditable(true);
+				list.addListSelectionListener(listSelectionListener);
+			}
+		});
+		btnMoveUp.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		panel.add(btnMoveUp);
+		
+		btnMoveDown = new JButton("Move down");
+		btnMoveDown.setEnabled(false);
+		btnMoveDown.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				list.removeListSelectionListener(listSelectionListener);
+				textArea.setEditable(false);
+				storage.moveEntryDown(selection);
+				selection++;
+				updateListModel();
+				updateButtons();
+				list.setSelectedIndex(selection);
+				textArea.setEditable(true);
+				list.addListSelectionListener(listSelectionListener);
+			}
+		});
+		btnMoveDown.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		panel.add(btnMoveDown);
 		
 		JButton btnSave = new JButton("Save");
 		btnSave.addActionListener(new ActionListener() {
@@ -198,6 +240,7 @@ public class PasswordManager {
 					textArea.setEnabled(true);
 					textArea.setEditable(true);
 					btnRemove.setEnabled(true);
+					updateButtons();
 					textAreaDocument.addDocumentListener(documentListener);
 				}
 			}
@@ -257,6 +300,16 @@ public class PasswordManager {
 			storage.setEntryData(selection, document.getText(0, document.getLength()));
 		} catch (BadLocationException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private void updateButtons() {
+		if (selection == -1) {
+			btnMoveUp.setEnabled(false);
+			btnMoveDown.setEnabled(false);
+		} else {
+			btnMoveUp.setEnabled(selection != 0);
+			btnMoveDown.setEnabled(selection != storage.getEntryCount() - 1);
 		}
 	}
 }
